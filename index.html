@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <title>WebGL Robot Scene</title>
+    <script src="gl-matrix-min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>
     <script src="webgl-debug.js"></script>
     <script src="main.js" defer></script>
@@ -67,6 +68,16 @@
 
       <!-- Βήμα 7: Button reset -->
       <button id="resetBtn">Reset</button>
+
+      <div id="rotation-controls">
+      <p>Επέλεξε μέρος ρομπότ για περιστροφή με ροδέλα:</p>
+      <label><input type="radio" name="robotPart" value="rightArm"> Δεξί χέρι</label><br>
+      <label><input type="radio" name="robotPart" value="leftArm"> Αριστερό χέρι</label><br>
+      <label><input type="radio" name="robotPart" value="head"> Κεφάλι</label><br>
+      <label><input type="radio" name="robotPart" value="rightLeg"> Δεξί πόδι</label><br>
+      <label><input type="radio" name="robotPart" value="leftLeg"> Αριστερό πόδι</label><br>
+    </div>
+
     </div>
   </body>
 </html>

@@ -14,23 +14,19 @@ let height = 50;
 let animationInterval = null;
 let skyTexture;
 let floorTexture;
+let isMouseDown = false;
+let lastMouseX = 0;
+let lastMouseY = 0;
 
 
 window.onload = async function () {
   try {
-    //1. Initialize WebGL
     const canvas = document.getElementById('glcanvas');
-    if (!canvas) {
-      throw new Error("Canvas element not found");
-    }
-    
-    gl = canvas.getContext('webgl', { depth: true });
-    if (!gl) {
-      throw new Error("WebGL not supported");
-    }
+    if (!canvas) throw new Error("Canvas element not found");
 
-    // 2. Load textures FIRST
-    console.log("Loading textures...");
+    gl = canvas.getContext('webgl', { depth: true });
+    if (!gl) throw new Error("WebGL not supported");
+
     [metalTexture, headTexture, skyTexture, floorTexture] = await Promise.all([
       loadTexture(gl, 'metal.jpg'),
       loadTexture(gl, 'head-texture.png'),
@@ -38,20 +34,13 @@ window.onload = async function () {
       loadTexture(gl, 'floor-names.jpg')
     ]);
 
-    
-    if (!gl.isTexture(metalTexture) || !gl.isTexture(headTexture)) {
-      throw new Error("Texture loading failed");
-    }
-    console.log("Textures loaded successfully");
+    if (!gl.isTexture(metalTexture) || !gl.isTexture(headTexture)) throw new Error("Texture loading failed");
 
-    // 3. Initialize WebGL state
     gl.clearColor(0.0, 0.0, 0.0, 0.4);
-gl.enable(gl.DEPTH_TEST);
-gl.disable(gl.CULL_FACE);  // ✅ Προστέθηκε αυτό
-gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.DEPTH_TEST);
+    gl.disable(gl.CULL_FACE);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-
-    // 4. Create shader program
     const vertexShaderSource = `
     attribute vec3 aPosition;
     attribute vec2 aTexCoord;
@@ -59,109 +48,100 @@ gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     uniform mat4 uProjectionMatrix;
     uniform mat4 uViewMatrix;
     uniform mat4 uModelMatrix;
-
     void main(void) {
       gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * vec4(aPosition, 1.0);
       vTexCoord = aTexCoord;
     }`;
 
-
-    const fragmentShaderSource = 
-     ` precision mediump float;
-      varying vec2 vTexCoord;
-      uniform sampler2D uSampler;
-      void main(void) {
-        gl_FragColor = texture2D(uSampler, vTexCoord);
-      }`
-    ;
+    const fragmentShaderSource = `
+    precision mediump float;
+    varying vec2 vTexCoord;
+    uniform sampler2D uSampler;
+    void main(void) {
+      gl_FragColor = texture2D(uSampler, vTexCoord);
+    }`;
 
     program = createShaderProgram(vertexShaderSource, fragmentShaderSource);
-    if (!program) {
-      throw new Error("Shader program creation failed");
-    }
     gl.useProgram(program);
 
-    // 5. Get and validate uniform locations
     uModelMatrix = gl.getUniformLocation(program, "uModelMatrix");
     const uViewMatrix = gl.getUniformLocation(program, "uViewMatrix");
     const uProjectionMatrix = gl.getUniformLocation(program, "uProjectionMatrix");
-    
-    if (!uModelMatrix || !uViewMatrix || !uProjectionMatrix) {
-      throw new Error("Could not get uniform locations");
-    }
 
-    // 6. Set up cube buffers
     const { vertices, texCoords } = getCubeData();
     vertexBuffer = createAndFillBuffer(gl, vertices);
     texCoordBuffer = createAndFillBuffer(gl, texCoords);
-    
-    // 7. Set up head buffers
+
     const { vertices: headVertices, texCoords: headUVs } = getHeadCubeData();
     headVertexBuffer = createAndFillBuffer(gl, headVertices);
     headTexCoordBuffer = createAndFillBuffer(gl, headUVs);
 
-    // 8. Set up attributes
     aPosition = gl.getAttribLocation(program, "aPosition");
     aTexCoord = gl.getAttribLocation(program, "aTexCoord");
-    
-    if (aPosition === -1 || aTexCoord === -1) {
-      throw new Error("Could not get attribute locations");
-    }
 
-    // 9. Set up camera
     const viewMatrix = mat4.create();
     mat4.lookAt(viewMatrix, [8, 8, 8], [0, 0, 0], [0, 0, 1]);
-    
     const projectionMatrix = mat4.create();
     mat4.perspective(projectionMatrix, glMatrix.toRadian(60), 1.0, 0.001, 8000);
-    
+
     gl.uniformMatrix4fv(uViewMatrix, false, viewMatrix);
     gl.uniformMatrix4fv(uProjectionMatrix, false, projectionMatrix);
 
-    // 10. Set up UI
-    document.getElementById("redrawBtn")?.addEventListener("click", () => {  //redraw handler
+    document.getElementById("redrawBtn")?.addEventListener("click", () => {
       redrawCamera(program);
     });
 
-    // 11. Initial render
-    console.log(" Starting rendering...");
-    redrawCamera(program);
-
-    document.getElementById("startAnimBtn")?.addEventListener("click", () => { // start animation
+    document.getElementById("startAnimBtn")?.addEventListener("click", () => {
       startCameraAnimation(program);
     });
 
-      document.getElementById("resetBtn")?.addEventListener("click", () => {
-      console.log("Resetting camera and UI inputs");
-
-      //1. Σταμάτησε την animation loop
+    document.getElementById("resetBtn")?.addEventListener("click", () => {
       stopCameraAnimation();
-
-      //2. Επαναφορά εσωτερικών παραμέτρων
       angle = 60;
-
-
-      //3. Επαναφορά input πεδίων σε default τιμές
-      const viewAngleInput = document.getElementById("viewAngle");
-      const camDistanceInput = document.getElementById("camOrthoDistance");
-      if (viewAngleInput) viewAngleInput.value = "60";         // default view angle
-      if (camDistanceInput) camDistanceInput.value = "45";      // default distance
-
-      //4. Επιλογή default κάμερας
-      const defaultCamRadio = document.querySelector("input[name='cameraPos'][value='Left-Front-Top']");
-      if (defaultCamRadio) defaultCamRadio.checked = true;
-
-      //5. Ανασχεδίαση κάμερας
+      document.getElementById("viewAngle").value = "60";
+      document.getElementById("camOrthoDistance").value = "45";
+      document.querySelector("input[name='cameraPos'][value='Left-Front-Top']").checked = true;
       redrawCamera(program);
     });
 
-
-
+    redrawCamera(program);
   } catch (error) {
     console.error("Initialization failed:", error);
     alert(`Initialization failed: ${error.message}`);
-
   }
+
+  const canvas = document.getElementById('glcanvas');
+  canvas.addEventListener("mousedown", (e) => {
+    isMouseDown = true;
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+  });
+
+  canvas.addEventListener("mouseup", () => {
+    isMouseDown = false;
+  });
+
+  canvas.addEventListener("mouseleave", () => {
+    isMouseDown = false;
+  });
+
+  canvas.addEventListener("mousemove", (e) => {
+    if (!isMouseDown) return;
+
+    const deltaX = e.clientX - lastMouseX;
+    const deltaY = e.clientY - lastMouseY;
+
+    angle += deltaX * 0.005;
+    height += deltaY * 0.1;
+    height = Math.max(-100, Math.min(100, height));
+
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+
+    if (!animationInterval) {
+      updateCameraSpiral(program);
+    }
+  });
 };
 
 // Helper function for buffer creation
@@ -488,25 +468,25 @@ function drawRobot(uModelMatrix, program, metalTexture, headTexture) {
     // Robot parts configuration
     const robotParts = [
         // Feet (red)
-        { type: 'cube', scale: [4, 6, 2], position: [-3, -1, 5], texture: metalTexture },
-        { type: 'cube', scale: [4, 6, 2], position: [3, -1, 5], texture: metalTexture },
+        { type: 'cube', scale: [4, 6, 2], position: [-3, -1, 2], texture: metalTexture },
+        { type: 'cube', scale: [4, 6, 2], position: [3, -1, 2], texture: metalTexture },
         
         // Legs (yellow)
-        { type: 'cube', scale: [4, 4, 10], position: [-3, 0, 11], texture: metalTexture },
-        { type: 'cube', scale: [4, 4, 10], position: [3, 0, 11], texture: metalTexture },
+        { type: 'cube', scale: [4, 4, 10], position: [-3, 0, 8], texture: metalTexture },
+        { type: 'cube', scale: [4, 4, 10], position: [3, 0, 8], texture: metalTexture },
         
         // Torso (red)
-        { type: 'cube', scale: [10, 6, 12], position: [0, 0, 22], texture: metalTexture },
+        { type: 'cube', scale: [10, 6, 12], position: [0, 0, 19], texture: metalTexture },
         
         // Arms (yellow)
-        { type: 'cube', scale: [2, 4, 10], position: [-6, 0, 23], texture: metalTexture },
-        { type: 'cube', scale: [2, 4, 10], position: [6, 0, 23], texture: metalTexture },
+        { type: 'cube', scale: [2, 4, 10], position: [-6, 0, 20], texture: metalTexture },
+        { type: 'cube', scale: [2, 4, 10], position: [6, 0, 20], texture: metalTexture },
         
         // Head (special texture)
         { 
             type: 'head', 
             scale: [6, 4, 5], 
-            position: [0, 0, 30], 
+            position: [0, 0, 27], 
             texture: headTexture,
             vertexBuffer: headVertexBuffer,
             texBuffer: headTexCoordBuffer
