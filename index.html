@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>WebGL Robot Scene</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>
+    <script src="webgl-debug.js"></script>
+    <script src="main.js" defer></script>
+  </head>
+  <body>
+    <h1>Εργασία Γραφικών Υπολογιστών</h1>
+  
+
+<div style="position: relative; width: 800px; height: 800px;">
+  <canvas id="glcanvas" width="800" height="800"></canvas>
+  <div style="
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    color: white;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 6px 10px;
+    font-size: 16px;
+    font-family: sans-serif;
+    border-radius: 5px;">
+    Καραμπέτσος Παντελής - Κατσίπη Αναστασία
+  </div>
+</div>
+
+
+    <div id="controls">
+      <!-- Βήμα 3: viewAngle + camOrthoDistance -->
+      <label
+        >View Angle: <input type="number" id="viewAngle" value="60"
+      /></label>
+      <label
+        >Cam Ortho Distance:
+        <input type="number" id="camOrthoDistance" value="45"
+      /></label>
+
+      <!-- Βήμα 3: Επιλογές κάμερας -->
+      <fieldset>
+        <legend>Camera Positions</legend>
+        <label
+          ><input
+            type="radio"
+            name="cameraPos"
+            value="Left-Front-Top"
+            checked
+          />
+          Left-Front-Top</label
+        >
+        <label
+          ><input type="radio" name="cameraPos" value="Right-Back-Bottom" />
+          Right-Back-Bottom</label
+        >
+        <!-- ...όλες οι επιλογές από το Βήμα 3 -->
+      </fieldset>
+
+      <!-- Βήμα 4: Button redraw -->
+      <button id="redrawBtn">Redraw</button>
+
+      <!-- Βήμα 6: Buttons animation -->
+     <button id="startAnimBtn">Start Animation</button>
+
+      <button onclick="stopCameraAnimation()">Stop Animation</button>
+
+      <!-- Βήμα 7: Button reset -->
+      <button id="resetBtn">Reset</button>
+    </div>
+  </body>
+</html>
